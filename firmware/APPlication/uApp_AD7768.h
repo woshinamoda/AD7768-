@@ -383,7 +383,7 @@ extern ad7768_dev ad7768_device;
 /* Private user function business code ----------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void eCon_ad7768_init();
+void my_ad7768_init();
 uint8_t ad7768_read_cmd(uint8_t reg_addr);
 uint8_t add7768_write_cmd(uint8_t reg_addr, uint8_t data);
 void ad7768_gain_set(uint8_t chn, uint32_t gain);

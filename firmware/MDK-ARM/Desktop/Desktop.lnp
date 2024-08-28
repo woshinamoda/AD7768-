@@ -9,6 +9,7 @@
 "desktop\spi.o"
 "desktop\tim.o"
 "desktop\usart.o"
+"desktop\usb_otg_hs.o"
 "desktop\stm32h7xx_it.o"
 "desktop\stm32h7xx_hal_msp.o"
 "desktop\usb_device.o"

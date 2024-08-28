@@ -71,8 +71,7 @@ void Error_Handler(void);
 #define SPI1_CS_GPIO_Port GPIOG
 #define DRDY_Pin GPIO_PIN_6
 #define DRDY_GPIO_Port GPIOD
-#define GD0_Pin GPIO_PIN_11
-#define GD0_GPIO_Port GPIOA
+#define DRDY_EXTI_IRQn EXTI9_5_IRQn
 #define FILTER_Pin GPIO_PIN_10
 #define FILTER_GPIO_Port GPIOA
 #define MODE3_Pin GPIO_PIN_9

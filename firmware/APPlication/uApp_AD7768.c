@@ -814,7 +814,7 @@ void ad7768_setup(void)
 /* USER CODE BEGIN 0 */
 uint8_t reg_code[90];  //P73Ò³£¬×Ü¼Æ0x59¼Ä´æÆ÷
 
-void eCon_ad7768_init()
+void my_ad7768_init()
 {
 	
 //	//AD7768 reset
@@ -1037,7 +1037,7 @@ void Fill_reg_List()
 
 
 uint8_t ReadBuf[32];
-int boardChannelDataInt[9] = {0xAABBCCDD};
+int boardChannelDataInt[9] = {0xBBCC11FF};
 
 void HAL_GPIO_EXTI_Callback(uint16_t	GPIO_Pin)
 {

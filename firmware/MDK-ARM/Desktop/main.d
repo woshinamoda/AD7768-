@@ -50,6 +50,7 @@ desktop\main.o: ../USB_DEVICE/Target/usbd_conf.h
 desktop\main.o: E:\UserSoft_keil\ARM\ARMCC\Bin\..\include\stdio.h
 desktop\main.o: E:\UserSoft_keil\ARM\ARMCC\Bin\..\include\stdlib.h
 desktop\main.o: E:\UserSoft_keil\ARM\ARMCC\Bin\..\include\string.h
+desktop\main.o: ../Core/Inc/usb_otg_hs.h
 desktop\main.o: ../Core/Inc/gpio.h
 desktop\main.o: ../APPlication/uApp_other.h
 desktop\main.o: ../APPlication/uApp_AD7768.h
