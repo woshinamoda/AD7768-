@@ -380,6 +380,26 @@ extern ad7768_dev ad7768_device;
 #define SLAVE  0
 
 
+/* Private user function business code ----------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+void eCon_ad7768_init();
+uint8_t ad7768_read_cmd(uint8_t reg_addr);
+uint8_t add7768_write_cmd(uint8_t reg_addr, uint8_t data);
+void ad7768_gain_set(uint8_t chn, uint32_t gain);
+void ad7768_start(void);
+void ad7768_stop(void);
+void ad7768_gain_set(uint8_t ch, uint32_t gain);
+void ad7768_rate_set(uint16_t rate);
+void Fill_reg_List();
+
+
+void ReadData_Handle();
+uint8_t Data_CRC(uint8_t * code);
+/* USER CODE END 0 */
+
+
+
 
 
 

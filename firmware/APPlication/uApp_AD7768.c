@@ -61,7 +61,8 @@
 #include "uApp_AD7768.h"
 #include "main.h"
 #include "usbd_cdc_if.h"
-
+#include "spi.h"
+#include "usart.h"
 /* USER CODE END Includes */
 
 
@@ -698,7 +699,7 @@ int32_t ad7768_get_ch_mode(ad7768_dev *dev,
 /* ad7768 function END 0 */
 
 
-/* Private user variables code ----------------------------------------------------*/
+/* 参考官方例程代码 ----------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 uint8_t reg_data = 0;
@@ -716,14 +717,6 @@ ad7768_init_param ad7768_init=			//ad7768初始化结构体声明
 	.crc_sel 		= AD7768_NO_CRC
 };
 
-/* USER CODE END 0 */
-
-
-
-
-
-/* Private user function business code ----------------------------------------------------*/
-/* USER CODE BEGIN 0 */
 
 int32_t ad7768_reset(void)
 {
@@ -809,6 +802,7 @@ void ad7768_setup(void)
 }
 
 
+/* USER CODE END 0 */
 
 
 
@@ -816,16 +810,283 @@ void ad7768_setup(void)
 
 
 
+/* Private user function business code ----------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+uint8_t reg_code[90];  //P73页，总计0x59寄存器
+
+void eCon_ad7768_init()
+{
+	
+//	//AD7768 reset
+  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_14, GPIO_PIN_RESET);	
+	HAL_Delay(10);
+  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_14, GPIO_PIN_SET);	
+	HAL_Delay(10);	
+
+	Fill_reg_List();		//reg_code 赋值,先读取是否默认寄存器配置
+	CS_H;
+	add7768_write_cmd(AD7768_REG_CH_STANDBY,			0x00);		//enable所有通道
+	add7768_write_cmd(AD7768_REG_CH_MODE_A,				0x0D);		//默认A Sinc滤波器 x？？？采样率设置 ，请查阅手册P75
+																													// x1024 Fast = 8		Khz采样率 0x0D  DCLK = MCLK/4 
+																													// x512  Fast = 16	Khz采样率 0x0C
+																													// x256  Fast = 32	Khz采样率 0x0B
+																													// x128  Fast = 64	Khz采样率 0x0A
+																													// x64   Fast = 128	Khz采样率 0x09	
+																													// x32   Fast = 256	Khz采样率 0x08		
+	
+	
+	
+	
+	add7768_write_cmd(AD7768_REG_CH_MODE_B,				0x0D);		//默认B Sinc滤波器 x？？？采样率设置
+	add7768_write_cmd(AD7768_REG_CH_MODE_SEL,			0x00);		//默认所有通道选择A
+	/*POWER MODE SELECT REGISTER*/	
+	add7768_write_cmd(AD7768_REG_PWR_MODE,				0x00);		//bit7			|SLEEP_MODE		：0 Normal operation. 	1 Sleep mode.	
+																													//bit[5:4]	|POWER_MODE		：00 Eco mode.  10 Median mode.  11 Fast mode.
+																													//bit3		 	|LVDS_ENABLE	：0 LVDS input clock disabled.	 1 LVDS input clock enabled.
+																													//bit[1:0] 	|MCLK_DIV			：00 MCLK/32:		10 MCLK/8:		11 MCLK/4:
+	/*GENERAL DEVICE CONFIGURATION REGISTER*/	
+	add7768_write_cmd(AD7768_REG_GENERAL_CFG,			0x22);		//bit5 			|RETIME_EN		：0 Disabled		1 Enable SYNC_OUT signal from MCLK	 
+																													//bit4 			|VCM_PD				：0 Enable 			1 VCM Power Down 
+																													//blt[1:0]	|VCM_VSEL			：00(AVDD1 - AVSS)/2 V.		01 1.65 V.		10 2.5V		11 2.14V  使用VCM时必须开启通道0
+	/*DATA CONTROL: SOFT RESET, SYNC, AND SINGLE-SHOT CONTROL REGISTER*/	
+	add7768_write_cmd(AD7768_REG_DATA_CTRL,				0x80);		//bit7			|SPI_SYNC			：0 SPI_SYNC low. 	1 SPI_SYNC high （只有1个设备默认高）
+																													//bit4  		|SINGLE_SHOT	：0 Disabled.		1 Enabled.（不开启）
+																													//blt[1:0]	|SPI_RESET		：No effect. 
+	/*INTERFACE CONFIGURATION REGISTER*/
+	add7768_write_cmd(AD7768_REG_INTERFACE_CFG,		0x00);	  //bit[3:2]	|CRC_SELECT		：00 No CRC
+																													//blt[1:0]	|DCLK_DIV			：00 分频1/8		01 分频1/4		10 分频1/2		00 不分频（追求最大速率，不分频）  ！！DCLK最快8ns，还有增加采集频率空间，但不推荐
 
 
+//	/*DIGITAL FILTER RAM BUILT IN SELF TEST (BIST) REGISTER*/
+//	add7768_write_cmd(AD7768_REG_BIST_CTRL,				0x00);		// 内部RAM自检，不需要用到NC
+//	/*STATUS REGISTER*/
+//	add7768_write_cmd(AD7768_REG_DEV_STATUS,			0x00);		// 设备内部时钟 RAM状态检查， 该寄存器只能读取，无法写。 读取信息P79
+//	/*Revision ID*/
+//	add7768_write_cmd(AD7768_REG_REV_ID,					0x06);		// 设备ID for revisions details， 该寄存器只能读取，无法写。
+//	/*GPIO CONTROL REGISTER*/
+//	add7768_write_cmd(AD7768_REG_GPIO_CTRL,					0x00);		//bit7		|UGPIO_ENABLE	：0 GPIO Disable		1 GPIO Enable		GPIO放弃不用，后续关于GPIO的3个寄存器不做展示AD7768_REG_GPIO_WR_DATA | AD7768_REG_GPIO_RD_DATA
+//																														//bit4		|GPIOE4_FILTER：0 input		1 output	
+//																														//bit3		|GPIOE3_MODE3	：0 input		1 output
+//																														//bit2		|GPIOE2_MODE2	：0 input		1 output	
+//																														//bit1		|GPIOE1_MODE1	：0 input		1 output	
+//																														//bit0		|GPIOE0_MODE0	：0 input		1 output	
 
 
+	/*BUFFER ENABLE REGISTER 0 - 3*/
+	add7768_write_cmd(AD7768_REG_PRECHARGE_BUF_1,		0xff);	//默认通道 0-3开启缓冲	
+	/*BUFFER ENABLE REGISTER 4 - 7*/
+	add7768_write_cmd(AD7768_REG_PRECHARGE_BUF_2,		0xff);	//默认通道 4-7开启缓冲	
+	/*0-7负极参考缓冲*/
+	add7768_write_cmd(AD7768_REG_POS_REF_BUF,				0x00);	//负极缓冲off		
+	/*0-7正极参考缓冲*/
+	add7768_write_cmd(AD7768_REG_NEG_REF_BUF,				0x00);	//正极缓冲off	
+	
+	
+	for(uint8_t i=0; i<8; i++)
+	{
+		ad7768_gain_set(i+1, 0x555555);		//配置输出增益
+	}
+	
+
+	Fill_reg_List();		//reg_code 读取设置后的寄存器校验
+	
+	//实际设置结果
+	//MCLK = 4.2Mhz （1/4分频，实际输入晶振32.768M）
+	//DCLK = 4.2Mhz
+	//采集输入电源模式：FAST  单线D0只能采集8Mhz
+}
+
+
+uint8_t ad7768_read_cmd(uint8_t reg_addr)
+{
+	uint8_t set_buf[2];
+	uint8_t read_buf[2];
+	set_buf[0] = 0x80 | (reg_addr & 0x7F);	//reg_addr
+	set_buf[1] = 0x00;											//None
+	
+	//CMD1,发送读取指令
+	CS_L;
+	HAL_SPI_TransmitReceive(&hspi1, set_buf, read_buf, 2, 0xff);
+	CS_H;
+
+	//CMD2，再次读取获取第一个偏移后的响应数据
+	CS_L;
+	HAL_SPI_TransmitReceive(&hspi1, set_buf, read_buf, 2, 0xff);
+	CS_H;
+	
+	return read_buf[1];		//返回读取值
+}
+
+uint8_t add7768_write_cmd(uint8_t reg_addr, uint8_t data)
+{
+	uint8_t set_buf[2];
+	uint8_t read_buf[2];
+	
+	set_buf[0] = (reg_addr & 0x7F);			//bit15	write=1
+	set_buf[1] = data;						 			//reg data
+	
+	//CMD1,发送读取指令
+	CS_L;
+	HAL_SPI_TransmitReceive(&hspi1, set_buf, read_buf, 2, 0xff);
+	CS_H;
+
+	return set_buf[1]; //返回写入值	
+
+}
+
+void ad7768_gain_set(uint8_t chn, uint32_t gain)
+{
+	add7768_write_cmd(AD7768_REG_CH_GAIN_1(chn-1), (gain>>16) & 0x000000ff);	//MSB
+	add7768_write_cmd(AD7768_REG_CH_GAIN_2(chn-1), (gain>>8) & 0x000000ff);		//Mid
+	add7768_write_cmd(AD7768_REG_CH_GAIN_3(chn-1), (gain>>0) & 0x000000ff);		//LSB
+}
+
+
+void ad7768_start(void)
+{//开启ADI采集
+
+
+}
+
+
+void ad7768_stop(void)
+{//关闭ADI采集
+
+}
+
+
+void ad7768_rate_set(uint16_t rate)
+{
+	ad7768_device.rate = rate;
+	
+	if(rate <= 32)
+	{
+		ad7768_device.power_mode = AD7768_ECO;
+		ad7768_device.mclk_div = AD7768_MCLK_DIV_32; 
+	}
+	else if(rate <= 128)
+	{
+		ad7768_device.power_mode = AD7768_FAST;
+		ad7768_device.mclk_div = AD7768_MCLK_DIV_8; 
+	}
+	else
+	{
+		ad7768_device.power_mode = AD7768_FAST;
+		ad7768_device.mclk_div = AD7768_MCLK_DIV_4; 
+	}
+	
+	ad7768_set_power_mode(&ad7768_device, ad7768_device.power_mode);
+	ad7768_set_mclk_div(&ad7768_device, ad7768_device.mclk_div);
+	
+	switch(rate)
+	{
+		case 1:
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X1024);
+			break;
+		case 2:
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X512);
+			break;
+		case 4:
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X256);
+			break;
+		case 8:
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X128);
+			break;
+		case 16:
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X64);
+			break;
+		case 32:
+			ad7768_set_dclk_div(&ad7768_device, AD7768_DCLK_DIV_8);
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X32);
+			break;
+		case 64:
+			ad7768_set_dclk_div(&ad7768_device, AD7768_DCLK_DIV_4);
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X64);
+			break;
+		case 128:
+			ad7768_set_dclk_div(&ad7768_device, AD7768_DCLK_DIV_2);
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X32);
+			break;
+		case 256:
+			ad7768_set_dclk_div(&ad7768_device, AD7768_DCLK_DIV_1);
+			ad7768_set_mode_config(&ad7768_device, AD7768_MODE_A, AD7768_FILTER_SINC, AD7768_DEC_X32);
+			break;
+		
+		default:
+			break;
+	}
+}
+
+void Fill_reg_List()
+{//填充寄存器原始列表
+	for(uint8_t i=0; i<0x59; i++)
+	{
+		reg_code[i]=ad7768_read_cmd(i);
+		CS_H;		//速度太快？？有时候CS没拉高，后面一直读错
+	}
+}
 
 /* USER CODE END 0 */
 
 
 
 
+
+/* Private user interrupt function handle ----------------------------------------------------*/
+/* USER HANDLE BEGIN 0 */
+
+
+uint8_t ReadBuf[32];
+int boardChannelDataInt[9] = {0xAABBCCDD};
+
+void HAL_GPIO_EXTI_Callback(uint16_t	GPIO_Pin)
+{
+	if(GPIO_Pin == DRDY_Pin)
+	{
+		HAL_SPI_Receive(&hspi4, ReadBuf, 32, 0xff);
+
+		for(uint8_t i=1; i<9; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{ //  read 24 bits of channel data in 8 3 byte chunks
+				uint8_t inByte;
+				inByte = ReadBuf[j+1 + (i-1)*4];
+				boardChannelDataInt[i] = (boardChannelDataInt[i] << 8) | inByte; // int data goes here
+			}
+		}
+
+		
+		for(uint8_t i=1; i<9; i++)
+		{
+			if ((boardChannelDataInt[i] & 0x00800000) == 0x00800000)
+			{
+				boardChannelDataInt[i] |= 0xFF000000;
+			}else
+			{
+				boardChannelDataInt[i] &= 0x00FFFFFF;
+			}
+		}
+
+		for(uint8_t i=1; i<9; i++)
+		{
+			boardChannelDataInt[i]  = boardChannelDataInt[i] * 0.4882817517;
+		}	
+
+		if(HAL_UART_Transmit(&huart3, boardChannelDataInt, 36,  1) != HAL_OK)
+		{
+			Error_Handler();
+		}
+
+	}
+
+}
+
+
+
+
+
+
+/* USER HANDLE END 0 */
 
 
 

@@ -91,6 +91,9 @@ void Error_Handler(void);
 #define D7_GPIO_Port GPIOE
 /* USER CODE BEGIN Private defines */
 
+#define CS_L 	HAL_GPIO_WritePin(GPIOG, GPIO_PIN_10, (GPIO_PinState)0)
+#define CS_H	HAL_GPIO_WritePin(GPIOG, GPIO_PIN_10, (GPIO_PinState)1)
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

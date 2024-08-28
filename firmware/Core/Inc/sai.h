@@ -31,7 +31,7 @@ extern "C" {
 
 /* USER CODE END Includes */
 
-extern SAI_HandleTypeDef hsai_BlockA1;
+
 
 /* USER CODE BEGIN Private defines */
 
